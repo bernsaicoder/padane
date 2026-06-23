@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PADANE | Walking Stick Alert Monitor</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Space Grotesk", "sans-serif"],
+            },
+            colors: {
+              padane: {
+                50: "#eff6ff",
+                100: "#dbeafe",
+                200: "#bfdbfe",
+                300: "#93c5fd",
+                400: "#60a5fa",
+                500: "#3b82f6",
+                600: "#2563eb",
+                700: "#1d4ed8",
+                800: "#1e40af",
+                900: "#1e3a8a",
+              },
+            },
+            boxShadow: {
+              glow: "0 24px 80px rgba(37, 99, 235, 0.18)",
+            },
+          },
+        },
+      };
+    </script>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+    ></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        font-family: "Space Grotesk", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 30%),
+          radial-gradient(circle at top right, rgba(191, 219, 254, 0.65), transparent 26%),
+          linear-gradient(180deg, #f8fbff 0%, #eef6ff 48%, #ffffff 100%);
+      }
+
+      #map {
+        min-height: 28rem;
+      }
+
+      .padane-grid {
+        background-image: linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
+        background-size: 28px 28px;
+      }
+
+      .pulse-marker {
+        position: relative;
+        width: 26px;
+        height: 26px;
+        border-radius: 9999px;
+        background: #2563eb;
+        border: 4px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55);
+      }
+
+      .pulse-marker::before {
+        content: "";
+        position: absolute;
+        inset: -9px;
+        border-radius: 9999px;
+        border: 2px solid rgba(37, 99, 235, 0.28);
+        animation: pulse 1.8s ease-out infinite;
+      }
+
+      .marker-label {
+        margin-top: 8px;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.95);
+        color: #1d4ed8;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(0.75);
+          opacity: 0.95;
+        }
+        100% {
+          transform: scale(1.55);
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body class="text-slate-900">
+    <main class="min-h-screen">
+      <section class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+        <div class="overflow-hidden rounded-[2rem] border border-white/70 bg-white/75 shadow-glow backdrop-blur-xl">
+          <div class="padane-grid relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-blue-100/50"></div>
+            <div class="relative grid gap-8 p-6 lg:grid-cols-[1.2fr_0.8fr] lg:p-10">
+              <div class="flex flex-col justify-center gap-6">
+                <div class="inline-flex w-fit items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-padane-700 shadow-sm">
+                  <span class="h-2.5 w-2.5 rounded-full bg-padane-500"></span>
+                  PADANE walking stick alert system
+                </div>
+                <div class="space-y-4">
+                  <h1 class="max-w-2xl text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+                    Personalized Assistive Device and Navigational Equipment 
+                    (PADANE 4.0)
+                  </h1>
+                  <p class="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                    Click <span class="font-semibold text-padane-700">Alert</span> to capture the current location, show it on the map, and keep tracking the user in real time. This front end is ready for the later Python backend and ESP32A7670 trigger.
+                  </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                  <button
+                    id="alertButton"
+                    class="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-padane-600 to-padane-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/25 transition duration-200 hover:-translate-y-0.5 hover:from-padane-700 hover:to-padane-600 focus:outline-none focus:ring-4 focus:ring-padane-200"
+                  >
+                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-lg">!</span>
+                    Press to Alert
+                  </button>
+                  <div class="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+                    Current state: <span id="alertStatus" class="font-semibold text-padane-700">Waiting for alert</span>
+                  </div>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-3">
+                  <div class="rounded-3xl border border-blue-100 bg-white/85 p-4 shadow-sm">
+                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Location</div>
+                    <div id="locationText" class="mt-2 text-sm font-semibold text-slate-800">Tap Alert to get the live position.</div>
+                  </div>
+                  <div class="rounded-3xl border border-blue-100 bg-white/85 p-4 shadow-sm">
+                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Latitude</div>
+                    <div id="latitudeText" class="mt-2 text-lg font-bold text-padane-700">--</div>
+                  </div>
+                  <div class="rounded-3xl border border-blue-100 bg-white/85 p-4 shadow-sm">
+                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Longitude</div>
+                    <div id="longitudeText" class="mt-2 text-lg font-bold text-padane-700">--</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-stretch justify-center">
+                <div class="flex w-full max-w-md flex-col overflow-hidden rounded-[1.75rem] border border-blue-100 bg-white shadow-xl">
+                  <div class="border-b border-blue-100 px-5 py-4">
+                    <div class="flex items-center justify-between gap-3">
+                      <div>
+                        <div class="text-sm font-semibold uppercase tracking-[0.25em] text-padane-500">Live map</div>
+                        <div class="mt-1 text-lg font-bold text-slate-900">User position tracker</div>
+                      </div>
+                      <div class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-padane-700">
+                        OSM + Leaflet
+                      </div>
+                    </div>
+                  </div>
+                  <div id="map"></div>
+
+<div class="border-t border-blue-100 bg-white p-4">
+  <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+    Exact Location
+  </div>
+
+  <div
+    id="addressText"
+    class="mt-2 text-sm font-semibold text-padane-700 break-words"
+  >
+    Waiting for GPS...
+  </div>
+</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
+          <section class="rounded-[2rem] border border-blue-100 bg-white/85 p-6 shadow-sm backdrop-blur">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-bold text-slate-950">Live tracking details</h2>
+                <p class="mt-1 text-sm text-slate-500">The marker updates whenever the browser receives a new GPS reading.</p>
+              </div>
+              <div class="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-padane-700">
+                Tracking active after alert
+              </div>
+            </div>
+
+            <div>
+                <!-- SMS Emergency Rescue Notification -->
+<div class="rounded-3xl bg-gradient-to-br from-blue-50 to-white p-5 ring-1 ring-blue-100 sm:col-span-2">
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="text-sm font-semibold text-slate-500">
+                Emergency SMS Notification
+            </div>
+
+            <div id="smsStatus"
+                class="mt-3 text-xl font-bold text-blue-700">
+                Standby
+            </div>
+
+            <div class="mt-2 text-sm text-slate-500">
+                Sends an emergency SMS to rescuers and caregivers when the PADANE alert button is triggered.
+            </div>
+        </div>
+
+        <button id="sendSMSButton"
+            class="rounded-xl bg-blue-600 px-5 py-3 text-white font-semibold hover:bg-blue-700 transition">
+            Send SOS SMS
+        </button>
+    </div>
+
+    <div class="mt-4 rounded-xl bg-blue-50 p-3 text-sm text-slate-700">
+        <strong>Recipient:</strong> Rescue Team / Caregiver<br>
+        <strong>Message:</strong>
+        PADANE user needs assistance. GPS coordinates will be attached automatically.
+    </div>
+</div>
+              <div class="rounded-3xl bg-gradient-to-br from-blue-50 to-white p-5 ring-1 ring-blue-100">
+                <div class="text-sm font-semibold text-slate-500">Accuracy</div>
+                <div id="accuracyText" class="mt-3 text-2xl font-bold text-padane-700">--</div>
+                <div class="mt-1 text-sm text-slate-500">Meters reported by the device.</div>
+              </div>
+              <div class="rounded-3xl bg-gradient-to-br from-blue-50 to-white p-5 ring-1 ring-blue-100">
+                <div class="text-sm font-semibold text-slate-500">Last updated</div>
+                <div id="updatedText" class="mt-3 text-2xl font-bold text-padane-700">--</div>
+                <div class="mt-1 text-sm text-slate-500">Fresh value from browser geolocation.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[2rem] border border-blue-100 bg-white/85 p-6 shadow-sm backdrop-blur">
+            <h2 class="text-2xl font-bold text-slate-950">Backend placeholder</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-500">
+              This front end is ready to send the alert payload to a Python service later. The ESP32A7670 button trigger can post to the same endpoint once the backend is added.
+            </p>
+
+            <div class="mt-5 rounded-3xl border border-dashed border-blue-200 bg-blue-50/60 p-5">
+              <div class="text-xs font-semibold uppercase tracking-[0.28em] text-padane-500">Planned Python route</div>
+              <div class="mt-2 text-lg font-bold text-slate-900">POST /api/alert</div>
+              <p class="mt-2 text-sm text-slate-600">
+                Expected payload: user id, latitude, longitude, timestamp, and device status.
+              </p>
+            </div>
+
+            <div class="mt-5 rounded-3xl bg-slate-50 p-5 text-sm text-slate-600">
+              <span class="font-semibold text-slate-900">Implementation note:</span> replace the placeholder fetch in the script with your Python Flask or FastAPI endpoint when you are ready.
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const fallbackPosition = [14.5995, 120.9842];
+      const map = L.map("map", { zoomControl: true }).setView(fallbackPosition, 14);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const locationIcon = L.divIcon({
+        className: "",
+        html: `
+          <div class="flex flex-col items-center">
+            <div class="pulse-marker"></div>
+            <div class="marker-label">PADANE user</div>
+          </div>
+        `,
+        iconSize: [110, 52],
+        iconAnchor: [55, 26],
+      });
+
+      const alertButton = document.getElementById("alertButton");
+      const alertStatus = document.getElementById("alertStatus");
+      const locationText = document.getElementById("locationText");
+      const latitudeText = document.getElementById("latitudeText");
+      const longitudeText = document.getElementById("longitudeText");
+      const accuracyText = document.getElementById("accuracyText");
+      const updatedText = document.getElementById("updatedText");
+      const smsStatus = document.getElementById("smsStatus");
+      const sendSMSButton = document.getElementById("sendSMSButton");
+      const addressText = document.getElementById("addressText");
+
+      let locationMarker = null;
+      let accuracyCircle = null;
+      let trackingWatchId = null;
+
+      function setStatus(message, tone = "normal") {
+        alertStatus.textContent = message;
+        alertStatus.className = tone === "error" ? "font-semibold text-red-600" : "font-semibold text-padane-700";
+      }
+
+      function formatUpdatedTime() {
+        return new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
+
+      async function getExactAddress(latitude, longitude) {
+
+    try {
+
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+        );
+
+        const data = await response.json();
+
+        if (data.display_name) {
+
+            addressText.textContent = data.display_name;
+
+        } else {
+
+            addressText.textContent =
+                "Address could not be determined.";
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        addressText.textContent =
+            "Unable to retrieve address.";
+
+    }
+}
+
+      function updateMap(position) {
+        const { latitude, longitude, accuracy } = position.coords;
+        const coords = [latitude, longitude];
+
+        if (!locationMarker) {
+          locationMarker = L.marker(coords, {
+            icon: locationIcon,
+            keyboard: false,
+          }).addTo(map);
+        } else {
+          locationMarker.setLatLng(coords);
+        }
+
+        if (accuracyCircle) {
+          accuracyCircle.setLatLng(coords);
+          accuracyCircle.setRadius(accuracy || 0);
+        } else {
+          accuracyCircle = L.circle(coords, {
+            radius: accuracy || 0,
+            color: "#2563eb",
+            fillColor: "#93c5fd",
+            fillOpacity: 0.18,
+            weight: 2,
+          }).addTo(map);
+        }
+
+        map.setView(coords, Math.max(map.getZoom(), 16), { animate: true });
+
+        const roundedLat = latitude.toFixed(6);
+        const roundedLng = longitude.toFixed(6);
+        const roundedAccuracy = Math.max(accuracy ? Math.round(accuracy) : 0, 0);
+        getExactAddress(latitude, longitude);
+
+        locationText.textContent = `Current location: ${roundedLat}, ${roundedLng}`;
+        latitudeText.textContent = roundedLat;
+        longitudeText.textContent = roundedLng;
+        accuracyText.textContent = roundedAccuracy > 0 ? `${roundedAccuracy} m` : "Unavailable";
+        updatedText.textContent = formatUpdatedTime();
+      }
+      function sendEmergencySMS(latitude, longitude) {
+
+    smsStatus.textContent = "Sending SOS...";
+
+    const smsPayload = {
+        phone: "+639XXXXXXXXX",
+        message:
+            `🚨 PADANE SOS ALERT 🚨
+User needs immediate assistance.
+
+Latitude: ${latitude}
+Longitude: ${longitude}
+
+Google Maps:
+https://maps.google.com/?q=${latitude},${longitude}`
+    };
+
+    // Future Flask/FastAPI endpoint
+    fetch("/api/send-sms", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(smsPayload),
+    })
+    .then(response => response.json())
+    .then(data => {
+        smsStatus.textContent = "SMS Sent Successfully";
+    })
+    .catch(error => {
+        console.error(error);
+        smsStatus.textContent = "SMS Sending Failed";
+    });
+}
+      function startTracking() {
+        if (!navigator.geolocation) {
+          setStatus("Geolocation is not supported by this browser.", "error");
+          return;
+        }
+
+        if (trackingWatchId !== null) {
+          setStatus("Alert active. Tracking the current location.");
+          return;
+        }
+
+        setStatus("Alert sent. Requesting live location...");
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            sendEmergencySMS(
+         position.coords.latitude,
+         position.coords.longitude
+    );
+            updateMap(position);
+            setStatus("Alert sent. Tracking the current location.");
+
+            trackingWatchId = navigator.geolocation.watchPosition(
+              (watchPosition) => {
+                updateMap(watchPosition);
+              },
+              (error) => {
+                setStatus(error.message, "error");
+              },
+              {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 15000,
+              }
+            );
+          },
+          (error) => {
+            setStatus(error.message, "error");
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 15000,
+          }
+        );
+      }
+
+      alertButton.addEventListener("click", () => {
+        alertButton.blur();
+        alertButton.classList.add("scale-[0.99]");
+        window.setTimeout(() => alertButton.classList.remove("scale-[0.99]"), 120);
+        setStatus("Alert triggered from PADANE.");
+        startTracking();
+      });
+      sendSMSButton.addEventListener("click", () => {
+
+    if (
+        latitudeText.textContent !== "--" &&
+        longitudeText.textContent !== "--"
+    ) {
+
+        sendEmergencySMS(
+            latitudeText.textContent,
+            longitudeText.textContent
+        );
+
+    } else {
+
+        smsStatus.textContent =
+            "Location unavailable. Trigger Alert first.";
+    }
+});
+      window.addEventListener("load", () => {
+        locationText.textContent = "Tap Alert to get the live position.";
+        updatedText.textContent = "Waiting";
+      });
+
+      // Python backend placeholder for later integration:
+      // POST /api/alert with latitude, longitude, timestamp, device id, and alert status.
+    </script>
+  </body>
+</html>

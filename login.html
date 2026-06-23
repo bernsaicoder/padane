@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>PADANE LOG IN</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Roboto',sans-serif;
+}
+
+body{
+    background:#f5f7fb;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.container{
+    width:450px;
+    background:white;
+    border:1px solid #dadce0;
+    border-radius:28px;
+    padding:50px;
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+}
+
+.logo{
+    text-align:center;
+    margin-bottom:25px;
+}
+
+.logo h1{
+    color:#1a73e8;
+    font-size:36px;
+    margin-bottom:8px;
+}
+
+.logo p{
+    color:#5f6368;
+    font-size:15px;
+}
+
+h2{
+    text-align:center;
+    color:#202124;
+    margin-bottom:10px;
+    font-weight:500;
+}
+
+.subtitle{
+    text-align:center;
+    color:#5f6368;
+    margin-bottom:35px;
+    font-size:15px;
+}
+
+.group{
+    margin-bottom:20px;
+}
+
+input{
+    width:100%;
+    padding:16px;
+    border:1px solid #dadce0;
+    border-radius:10px;
+    font-size:16px;
+    transition:.3s;
+}
+
+input:focus{
+    outline:none;
+    border:2px solid #1a73e8;
+}
+
+button{
+    width:100%;
+    background:#1a73e8;
+    color:white;
+    border:none;
+    padding:15px;
+    border-radius:30px;
+    font-size:16px;
+    cursor:pointer;
+    transition:.3s;
+}
+
+button:hover{
+    background:#1765cc;
+}
+
+.bottom{
+    margin-top:25px;
+    text-align:center;
+    color:#5f6368;
+}
+
+.bottom a{
+    color:#1a73e8;
+    text-decoration:none;
+    font-weight:500;
+}
+
+</style>
+</head>
+<body>
+
+    <script>
+
+if(localStorage.getItem("loggedIn")!="true")
+{
+    alert("Please login first.");
+    window.location.href="login.html";
+}
+
+</script>
+
+<div class="container">
+
+    <div class="logo">
+        <h1>PADANE</h1>
+        <p>Personalized Assistive Device and Navigational Equipment</p>
+    </div>
+
+    <h2>Log in</h2>
+
+    <div class="subtitle">
+        Use your PADANE Account
+    </div>
+
+    <div class="group">
+        <input
+            type="text"
+            id="username"
+            placeholder="Username">
+    </div>
+
+    <div class="group">
+        <input
+            type="password"
+            id="password"
+            placeholder="Password">
+    </div>
+
+    <button onclick="login()">
+        Log In
+    </button>
+
+    <div class="bottom">
+        Don't have an account?
+        <a href="index.html">Create account</a>
+    </div>
+
+</div>
+
+<script>
+
+function login(){
+
+    let enteredUser =
+        document.getElementById("username").value;
+
+    let enteredPass =
+        document.getElementById("password").value;
+
+    let user =
+        JSON.parse(localStorage.getItem("padaneUser"));
+
+    if(user == null){
+        alert("No registered account found.");
+        return;
+    }
+
+    if(
+        enteredUser === user.username &&
+        enteredPass === user.password
+    ){
+
+        localStorage.setItem("loggedIn","true");
+
+        window.location.href = "padane.html";
+
+    }
+    else{
+
+        alert("Incorrect username or password.");
+
+    }
+
+}
+
+function logout() {
+
+    localStorage.removeItem("loggedIn");
+
+    alert("You have been logged out.");
+
+    window.location.href = "login.html";
+
+}
+</script>
+
+</body>
+</html>
